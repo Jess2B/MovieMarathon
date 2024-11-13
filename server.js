@@ -73,6 +73,8 @@ const userSchema = new mongoose.Schema({
   lastLoginTime: { type: Date },
 });
 const User = mongoose.model('User', userSchema);
+User.ensureIndexes();
+
 
 // Generate Random String Function
 function generateRandomString(length) {
@@ -116,15 +118,15 @@ app.get('/user-details', isAuthenticated, async (req, res) => {
 
     // Fetch user details from the database
     const user = await User.findOne(
-      { email: email }, // Change this according to your actual field name if different
-      { email: 1, _id: 0 } // Return only the email field
+      { email: email }, 
+      { email: 1, _id: 0 }
     );
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
-    // Return only necessary details
+
     res.json({
       success: true,
       user: {
@@ -210,6 +212,12 @@ app.post('/send-password-reset', async (req, res) => {
 // Sign Up Route
 app.post('/signup', async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
+
+  // Validate email input
+  if (!email || !validator.isEmail(email)) {
+    return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
+  }
+
   try {
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ success: false, message: 'All fields are required.' });
@@ -334,3 +342,4 @@ app.post('/logout', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
