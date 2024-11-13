@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="style.css">
+    <title>Reset Password</title>
+</head>
+
+<body>
+    <div class="wrapper">
+        <nav class="nav">
+            <div class="nav-logo">
+                <i class='bx bx-movie-play bx-tada main-color'></i>
+                <span>Fl<span class="main-color">i</span>x</span> <!-- Styling Flix -->
+            </div>
+        </nav>
+
+    <!----------------------------- Form box ----------------------------------->
+    <form action="/confirm-email" method="POST" id="emailConfirm">
+        <div class="form-box">
+            <!------------------- reset password form -------------------------->
+
+            <div class="login-container" id="login">
+                <div class="top">
+                    <header>Reset Password</header>
+                </div>
+                <div class="input-box">
+                    <input type="text" id="token" class="input-field" placeholder="Reset Code">
+                    <i class="bx bx-key"></i>
+                    <span class="error"></span>
+                </div>
+
+                <div class="input-box">
+                    <input type="submit" class="submit" value="Submit">
+                </div>
+
+                <div class="two">
+                    <label><a href="login.html">Cancel</a></label>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Corrected form ID, changed from "confirmation-form" to "emailConfirm"
+    document.getElementById("emailConfirm").addEventListener("submit", function (event) {
+        event.preventDefault(); // Prevent default form submission
+
+        const token = document.getElementById("token").value;
+
+        // Validate the token input before proceeding
+        if (!validateInputs(token)) {
+            return; // Exit if validation fails
+        }
+
+        // Make an API request to confirm the reset code
+        fetch('/confirm-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);  // Show success message in alert
+                window.location.href = 'index.html';
+            } else {
+                alert(`Error: ${data.message}`);  // Show error message in alert
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again later.');  // Show generic error message in alert
+        });
+    });
+
+    // Validate the token input
+    function validateInputs(token) {
+        let isValid = true;
+
+        if (token.trim() === "") {
+            showError('token', "Reset Code is required");
+            isValid = false;
+        } else {
+            clearError('token');
+        }
+
+        return isValid;
+    }
+
+    // Show error message next to the input
+    function showError(elementId, message) {
+        const inputControl = document.getElementById(elementId).parentElement;
+        const errorDisplay = inputControl.querySelector(".error");
+        errorDisplay.innerText = message;
+        inputControl.classList.add("error");
+        inputControl.classList.remove("success");
+    }
+
+    // Clear error message
+    function clearError(elementId) {
+        const inputControl = document.getElementById(elementId).parentElement;
+        const errorDisplay = inputControl.querySelector(".error");
+        errorDisplay.innerText = "";
+        inputControl.classList.add("success");
+        inputControl.classList.remove("error");
+    }
+</script>
+</body>
+</html>

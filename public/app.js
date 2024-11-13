@@ -57,8 +57,8 @@ $(document).ready(() => {
     })
 })
 
- // Fetch user details when the page loads
- document.addEventListener('DOMContentLoaded', function () {
+// Fetch user details when the page loads
+document.addEventListener('DOMContentLoaded', function () {
     fetchUserDetails();
 });
 
@@ -69,9 +69,10 @@ async function fetchUserDetails() {
             throw new Error('Failed to fetch user details.');
         }
         const data = await response.json();
+        
         if (data.success) {
-            // Update the element with user email
-            document.getElementById('userEmail').textContent = data.user.email;
+            const firstName = data.user.firstName || 'Guest';
+            document.getElementById('userEmail').textContent = firstName;
         } else {
             console.error('Failed to fetch user details:', data.message);
         }
@@ -79,6 +80,7 @@ async function fetchUserDetails() {
         console.error('Error fetching user details:', error);
     }
 }
+
 
  // Add logout functionality
  document.getElementById('logoutLink').addEventListener('click', function (event) {

@@ -71,6 +71,7 @@ const userSchema = new mongoose.Schema({
   invalidLoginAttempts: { type: Number, default: 0 },
   accountLockedUntil: { type: Date },
   lastLoginTime: { type: Date },
+   isActive: { type: Boolean, default: false }, 
 });
 const User = mongoose.model('User', userSchema);
 User.ensureIndexes();
@@ -111,26 +112,24 @@ function isAuthenticated(req, res, next) {
 // Fetch user details route
 app.get('/user-details', isAuthenticated, async (req, res) => {
   try {
-    const email = req.session.email;
-    if (!email) {
+    // Ensure the user is authenticated and retrieve the userId from the session
+    const userId = req.session.userId;
+    if (!userId) {
       return res.status(401).json({ success: false, message: 'Unauthorized access.' });
     }
 
-    // Fetch user details from the database
-    const user = await User.findOne(
-      { email: email }, 
-      { email: 1, _id: 0 }
-    );
+    // Fetch the user from the database using userId (or email if you prefer)
+    const user = await User.findById(userId, { firstName: 1, _id: 0 });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
-
+    // Send the user's firstName in the response
     res.json({
       success: true,
       user: {
-        email: user.email // Return the user's email
+        firstName: user.firstName // Return the user's firstName
       }
     });
   } catch (error) {
@@ -138,6 +137,7 @@ app.get('/user-details', isAuthenticated, async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching user details.' });
   }
 });
+
 
 // Forgot Password Endpoint
 app.post('/forgot-password', async (req, res) => {
@@ -209,7 +209,7 @@ app.post('/send-password-reset', async (req, res) => {
   }
 });
 
-// Sign Up Route
+// Sign-Up Route
 app.post('/signup', async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
 
@@ -223,6 +223,7 @@ app.post('/signup', async (req, res) => {
       return res.status(400).json({ success: false, message: 'All fields are required.' });
     }
 
+    // Check if the email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email already registered.' });
@@ -232,15 +233,91 @@ app.post('/signup', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long and contain one uppercase letter, one lowercase letter, and one number.' });
     }
 
+    // Hash the password
     const hashedPassword = hashPassword(password);
 
-    const newUser = new User({ firstName, lastName, email, password: hashedPassword });
+    // Create the user as "unconfirmed"
+    const newUser = new User({ 
+      firstName, 
+      lastName, 
+      email, 
+      password: hashedPassword, 
+      isActive: false, // User is not active until they confirm the email
+      invalidLoginAttempts: 0,
+      accountLockedUntil: null,
+      lastLoginTime: null
+    });
+    
     await newUser.save();
 
-    res.json({ success: true, message: 'Account created successfully!' });
+    // Ensure that any previous tokens for the same email are deleted before generating a new one
+    await Token.deleteMany({ email }); // Delete previous tokens for the email
+
+    // Generate a confirmation token
+    const confirmationToken = generateRandomString(32);
+
+    // Save the new token in the Token collection
+    const token = new Token({ email, token: confirmationToken });
+    await token.save();
+
+    // Send the confirmation email
+    const msg = {
+      to: email,
+      from: 'jessyanfa@gmail.com', // Replace with your verified sender email
+      subject: 'Please confirm your email',
+      html: `<p>Your confirmation token is:</p><h3>${confirmationToken}</h3><p>Enter this token on the confirmation page to activate your account.</p>`,
+    };
+
+    await sgMail.send(msg);
+
+    res.json({ success: true, message: 'Account created! Please check your email for the confirmation token.' });
+    
   } catch (error) {
     console.error('Error creating account:', error);
     res.status(500).json({ success: false, message: 'An internal server error occurred.' });
+  }
+});
+
+// Email Confirmation Route (Token based)
+app.post('/confirm-email', async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Token is required.' });
+    }
+
+    // Check if the token exists and is valid
+    const tokenRecord = await Token.findOne({ token });
+    if (!tokenRecord) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired token.' });
+    }
+
+    const { email } = tokenRecord;
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    // Check if the user is already activated
+    if (user.isActive) {
+      return res.status(400).json({ success: false, message: 'Your account is already activated.' });
+    }
+
+    // Activate the user account
+    user.isActive = true; // Set the user as active
+    await user.save();
+
+    // Remove the token from the database since it's been used
+    await Token.deleteOne({ token });
+
+    res.json({ success: true, message: 'Your account has been activated. You can now log in.' });
+
+  } catch (error) {
+    console.error('Error confirming email:', error);
+    res.status(500).json({ success: false, message: 'An error occurred during email confirmation.' });
   }
 });
 
@@ -255,25 +332,31 @@ app.post('/login', loginLimiter, async (req, res) => {
     if (!validator.isEmail(email)) {
       return res.status(400).json({ success: false, message: 'Invalid email format.' });
     }
-    // Fetch user
+
+    // Fetch the user by email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ success: false, message: 'Invalid email or password.' });
     }
+
+    // Check if the user is active
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'Your account is not activated yet. Please check your email for the activation link.' });
+    }
+
     // Account lockout check
     if (user.accountLockedUntil && user.accountLockedUntil > new Date()) {
       const remainingTime = Math.ceil((user.accountLockedUntil - new Date()) / 60000);
       return res.status(403).json({ success: false, message: `Account is locked. Try again in ${remainingTime} minutes.` });
     }
+
     // Password verification
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      // Handle failed attempts
       let invalidAttempts = (user.invalidLoginAttempts || 0) + 1;
       let updateFields = { invalidLoginAttempts: invalidAttempts };
-      
+
       if (invalidAttempts >= 3) {
-        // Lock account
         updateFields.accountLockedUntil = new Date(Date.now() + 30 * 60 * 1000);
         updateFields.invalidLoginAttempts = 0;
         await User.updateOne({ _id: user._id }, { $set: updateFields });
@@ -284,28 +367,21 @@ app.post('/login', loginLimiter, async (req, res) => {
       }
     }
 
-
     // Successful login
     await User.updateOne(
       { _id: user._id },
       { $set: { invalidLoginAttempts: 0, accountLockedUntil: null, lastLoginTime: new Date() } }
     );
     req.session.userId = user._id;
-    req.session.email = user.email;
-    req.session.role = user.role; // Assuming role is a field in User
-    req.session.studentIDNumber = user.studentIDNumber; // Assuming studentIDNumber is a field in User
-    await new Promise((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-    res.json({ success: true, role: user.role, message: 'Login successful!' });
+    req.session.firstName = user.firstName; // Store the first name in session
+
+    res.json({ success: true, message: 'Login successful!' });
   } catch (error) {
     console.error('Error during login:', error);
     res.status(500).json({ success: false, message: 'Error during login.' });
   }
 });
+
 
 // Protected Route
 app.get('/dashboard', isAuthenticated, (req, res) => {

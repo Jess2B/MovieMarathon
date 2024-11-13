@@ -243,7 +243,7 @@
         <input type="submit" class="submit" value="Register">
     </div>
     <div class="top">
-        <span>Have an account? <a href ="index.html" onclick="login()">Login</a></span>
+        <span>Have an account? <a href ="login.html" onclick="login()">Login</a></span>
     </div>
     </div>
     </div>
@@ -287,16 +287,16 @@
     const email = document.getElementById("email");
     const pass = document.getElementById("password");
     const confirmPass = document.getElementById("confirm_password");
-    
+
     form.addEventListener("submit", e => {
         e.preventDefault();
-    
         if (validateInputs()) {
             const firstnameVal = firstname.value.trim();
             const lastnameVal = lastname.value.trim();
             const emailVal = email.value.trim();
             const passVal = pass.value.trim();
-    
+
+            // Simulating the sending of an email confirmation (for demo purposes)
             fetch(form.action, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -310,8 +310,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Account created successfully! You can now log in.');
-                    window.location.href = 'index.html';
+                    alert('Account created! Please check your email to confirm your registration.');
+                    window.location.href = 'emailconfirm.html';  // Redirect to email confirmation page
                 } else {
                     alert(data.message);
                 }
@@ -320,133 +320,132 @@
                 console.error('Error:', error);
                 alert('An error occurred. Please try again later.');
             });
-    
-            // Clear input fields after submission
+
             resetForm();
         }
     });
-    
+
     const resetForm = () => {
         firstname.value = "";
         lastname.value = "";
         email.value = "";
         pass.value = "";
         confirmPass.value = "";
-    
-        // Reset borders
+
         const inputFields = [firstname, lastname, email, pass, confirmPass];
         inputFields.forEach(field => {
             field.parentElement.classList.remove("success");
             field.parentElement.classList.remove("error");
         });
     };
-    
-const errors = (element, message) => {
-const inputControl = element.parentElement;
-const errorDisplay = inputControl.querySelector(".error");
 
-errorDisplay.innerText = message;
-inputControl.classList.add("error");
-inputControl.classList.remove("success");
-}
+    const errors = (element, message) => {
+        const inputControl = element.parentElement;
+        const errorDisplay = inputControl.querySelector(".error");
 
-const success = element => {
-const inputControl = element.parentElement;
-const errorDisplay = inputControl.querySelector(".error");
+        errorDisplay.innerText = message;
+        inputControl.classList.add("error");
+        inputControl.classList.remove("success");
+    };
 
-errorDisplay.innerText = "";
-inputControl.classList.add("success");
-inputControl.classList.remove("error");
-};
+    const success = element => {
+        const inputControl = element.parentElement;
+        const errorDisplay = inputControl.querySelector(".error");
 
-const isValidEmail = email => {
-const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-return re.test(String(email).toLowerCase());
-}
+        errorDisplay.innerText = "";
+        inputControl.classList.add("success");
+        inputControl.classList.remove("error");
+    };
 
-const validateInputs = () => {
-const emailVal = email.value.trim();
-const passVal = pass.value.trim();
-const confirmPassVal = confirmPass.value.trim();
-const firstnameVal = firstname.value.trim();
-const lastnameVal = lastname.value.trim(); 
+    const isValidEmail = email => {
+        const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        return re.test(String(email).toLowerCase());
+    };
 
-let isValid = true;
+    const validateInputs = () => {
+        const emailVal = email.value.trim();
+        const passVal = pass.value.trim();
+        const confirmPassVal = confirmPass.value.trim();
+        const firstnameVal = firstname.value.trim();
+        const lastnameVal = lastname.value.trim();
 
-if (firstnameVal === ""){
-    errors(firstname, "Please input your first name");
-    isValid = false;
-} else {
-    success(firstname);
-}
+        let isValid = true;
 
-if (lastnameVal === ""){
-    errors(lastname, "Please input your last name");
-    isValid = false;
-} else {
-    success(lastname);
-}
+        if (firstnameVal === "") {
+            errors(firstname, "Please input your first name");
+            isValid = false;
+        } else {
+            success(firstname);
+        }
 
-if(emailVal === "") {
-    errors(email, 'Email is required');
-    isValid = false;
-} else if (!isValidEmail(emailVal)) {
-    errors(email, 'Provide a valid email address');
-    isValid = false;
-} else {
-    success(email);
-}
+        if (lastnameVal === "") {
+            errors(lastname, "Please input your last name");
+            isValid = false;
+        } else {
+            success(lastname);
+        }
 
-if (passVal === "") {
-    errors(pass, "Password is required");
-    isValid = false;
-}else if (passVal.length < 7){
-    errors(pass, "Password must be at least 7 characters");
-    isValid = false;
-}else if (!/[A-Z]/.test(passVal)){
-    errors(pass, "Password MUST contain at least 1 uppercase letter")
-    isValid = false;
-}else if (!/[a-z]/.test(passVal)){
-    errors(pass, "Password MUST contain at least 1 lowercase letter")
-    isValid = false;
-}else if (!/[0-9]/.test(passVal)){
-    errors(pass, "Password MUST contain at least 1 number")
-    isValid = false;
-}else if (!/[^\\/`~!@#$%^&*:;<>._-|?+=()"'"]/.test(passVal)){
-    errors(pass, "Password MUST contain at least 1 special character")
-    isValid = false;
-}else{
-    success(pass);
-    }
+        if (emailVal === "") {
+            errors(email, 'Email is required');
+            isValid = false;
+        } else if (!isValidEmail(emailVal)) {
+            errors(email, 'Provide a valid email address');
+            isValid = false;
+        } else {
+            success(email);
+        }
 
+        if (passVal === "") {
+            errors(pass, "Password is required");
+            isValid = false;
+        } else if (passVal.length < 7) {
+            errors(pass, "Password must be at least 7 characters");
+            isValid = false;
+        } else if (!/[A-Z]/.test(passVal)) {
+            errors(pass, "Password MUST contain at least 1 uppercase letter");
+            isValid = false;
+        } else if (!/[a-z]/.test(passVal)) {
+            errors(pass, "Password MUST contain at least 1 lowercase letter");
+            isValid = false;
+        } else if (!/[0-9]/.test(passVal)) {
+            errors(pass, "Password MUST contain at least 1 number");
+            isValid = false;
+        } else if (!/[^\\/`~!@#$%^&*:;<>._-|?+=()"'"]/.test(passVal)) {
+            errors(pass, "Password MUST contain at least 1 special character");
+            isValid = false;
+        } else {
+            success(pass);
+        }
 
-if (confirmPassVal === "") {
-    errors(confirmPass, "Please confirm your password");
-    isValid = false;
-}else if(confirmPassVal !== passVal){
-    errors(confirmPass, "Passwords do not match");
-    isValid = false;
-}else{
-    success(confirmPass);
-}
-return isValid;
-}
+        if (confirmPassVal === "") {
+            errors(confirmPass, "Please confirm your password");
+            isValid = false;
+        } else if (confirmPassVal !== passVal) {
+            errors(confirmPass, "Passwords do not match");
+            isValid = false;
+        } else {
+            success(confirmPass);
+        }
 
- // Password visibility toggle
- document.getElementById('togglePassword').addEventListener('click', function () {
-    const passwordInput = document.getElementById('password');
-    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-    passwordInput.setAttribute('type', type);
-    this.textContent = type === 'password' ? '👁️' : '🙈';
-});
-// Confirm Password visibility toggle
-document.getElementById('toggleConfirmPassword').addEventListener('click', function () {
-    const confirmPasswordInput = document.getElementById('confirm_password');
-    const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-    confirmPasswordInput.setAttribute('type', type);
-    this.textContent = type === 'password' ? '👁️' : '🙈';
-});
+        return isValid;
+    };
 
+    // Password visibility toggle
+    document.getElementById('togglePassword').addEventListener('click', function () {
+        const passwordInput = document.getElementById('password');
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        this.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+
+    // Confirm Password visibility toggle
+    document.getElementById('toggleConfirmPassword').addEventListener('click', function () {
+        const confirmPasswordInput = document.getElementById('confirm_password');
+        const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        confirmPasswordInput.setAttribute('type', type);
+        this.textContent = type === 'password' ? '👁️' : '🙈';
+    });
 </script>
+</body>
 
 </html>

@@ -180,7 +180,7 @@ header{
 .two {
     display: flex;
     justify-content: center; /* Center the content horizontally */
-    margin-top: 2px; /* Add some space above */
+    margin-top: 5px; /* Add some space above */
 }
 
 .two-col{
